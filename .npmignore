@@ -1,0 +1,17 @@
+# config
+commitlint.config.js
+webpack.config.js
+
+# source files
+src
+
+# git hooks
+.husky
+
+# packed files
+*.tgz
+*.rar
+*.zip
+
+# others
+.env.example
