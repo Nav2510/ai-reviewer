@@ -1,11 +1,43 @@
 {
   "name": "aireviewer",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "version": "2.0.0-next.0",
+  "description": "Provider-agnostic, diff-aware AI code reviewer for pull requests.",
   "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./action": {
+      "types": "./dist/runners/action.d.ts",
+      "import": "./dist/runners/action.js"
+    },
+    "./cli": {
+      "types": "./dist/runners/cli.d.ts",
+      "import": "./dist/runners/cli.js"
+    }
+  },
+  "bin": {
+    "aireviewer": "bin/aireviewer.js"
+  },
+  "files": [
+    "dist",
+    "bin",
+    "action.yml",
+    "src/workflows",
+    "src/schemas"
+  ],
   "scripts": {
-    "postinstall": "node src/index.js"
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint \"src/**/*.ts\" \"tests/**/*.ts\"",
+    "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\"",
+    "postinstall": "node dist/install.js || node src/legacy-install.js"
   },
   "repository": {
     "type": "git",
@@ -14,10 +46,30 @@
   "author": "Navdeep Singh",
   "license": "ISC",
   "dependencies": {
+    "@actions/core": "^1.11.1",
     "@actions/github": "^6.0.0",
+    "@anthropic-ai/sdk": "^0.32.1",
+    "@google/generative-ai": "^0.21.0",
     "@octokit/rest": "^21.0.2",
     "minimatch": "^10.0.1",
-    "openai": "^4.57.0"
+    "ollama": "^0.5.11",
+    "openai": "^4.57.0",
+    "p-limit": "^6.1.0",
+    "parse-diff": "^0.11.1",
+    "pino": "^9.5.0",
+    "yaml": "^2.6.1",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "@typescript-eslint/eslint-plugin": "^8.15.0",
+    "@typescript-eslint/parser": "^8.15.0",
+    "eslint": "^9.15.0",
+    "prettier": "^3.3.3",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.5"
+  },
+  "engines": {
+    "node": ">=22"
   }
-  
 }

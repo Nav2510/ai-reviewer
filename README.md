@@ -1,111 +1,301 @@
 # AI Reviewer
 
-AI Reviewer is an intelligent tool designed to automate the review process of pull requests (PRs). It reviews the changes in each PR, generates summaries per file, adds relevant comments, suggestions, and highlights areas that need fixing. This ensures code quality and faster reviews.
+Provider-agnostic, diff-aware AI code reviewer for pull requests. Drops a single GitHub Action into your repo and posts batched, line-level review comments backed by the LLM of your choice (OpenAI, Anthropic, Gemini, or a local Ollama model).
 
-## Features
+- **Diff-only by default** — reviews changed hunks, not whole files. Cheap and fast.
+- **Multi-provider** — OpenAI / Anthropic / Gemini / Ollama. Per-file routing + fallback chain.
+- **Plug-and-play** — one YAML config, zero code changes to extend.
+- **Cached** — repeat runs on the same SHA are free.
+- **Batched** — one PR review per run, not N comments × M API calls.
 
-- **Automated Workflow Creation**: Automatically creates a workflow on installation.
-- **PR Review Automation**: Reviews pull requests and provides detailed feedback.
-- **File-based Summaries**: Summarize each files in short description.
-- **Comments & Suggestions**: Add comments and suggestions on areas of improvement.
-- **Fix Recommendations**: Suggest potential fixes for code issues.
-- **Improves Code Quality**: Helps maintain high coding standards with automated reviews.
+## Quick start (recommended: composite Action)
 
-## Installation
+`.github/workflows/review.yml`:
 
-To install `aireviewer` and set up the workflow, use the following command:
-
-```bash
-npm install aireviewer --save-dev
-```
-
-## Usage
-
-Once installed, `aireviewer` will automatically create a workflow file in your repository.
-
-## Adding OpenAI API Key to GitHub Secrets and setting permissions for GITHUB_TOKEN
-
-In order for AI Reviewer to leverage OpenAI's API to provide intelligent comments, suggestions, and summaries, you need to add your OpenAI API key to GitHub Secrets and allow workflow read, write permissions
-
-### Adding OpenAI API Key
-
-1. **Obtain Your OpenAI API Key:**
-    - Go to [OpenAI]("https://platform.openai.com/api-keys") and generate your API key.
-
-2. **Add the Key to GitHub Secrets:**
-    - Go to your GitHub repository.
-    - Navigate to `Settings` > `Secrets and variables` > `Actions` > `New repository secret`.
-    - Add a new secret with the following details:
-        - Name: `OPENAI_API_KEY`
-        - Value: Your OpenAI API key (**copied from the OpenAI dashboard**).
-
-3. **Accessing the API Key in Your Workflow:** In your GitHub Actions workflow, ensure that the OpenAI key is used by referencing the secret:
-
-
-    ```yaml
-    jobs:
-    review:
-        runs-on: ubuntu-latest
-        steps:
-        # Job Previous Steps...
-            env:
-            OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-    ```
-
-This ensures that the AI Reviewer tool has access to your OpenAI API key to generate intelligent code reviews.
-
-### Setting Permissions for GITHUB_TOKEN
-
-1. **Navigate to Your Repository on GitHub:**
-    - Go to GitHub and open your repository.
-
-2. **Open Actions Settings:**
-    - Navigate to `Settings` > `Actions` > `General`.
-    - Scroll down to the `Workflow permissions` section.
-
-3. **Modify Workflow Permissions:**
-    - Select `Read and write permissions`.
-    - Click the `Save` button to apply the changes.
-
-## Workflow Configuration
-
-The workflow file created by `aireviewer` will be located in the `.github/workflows` directory. You can customize it as needed. 
-
-Here is an example of what the workflow file might look like:
-
-``` yml
-name: OpenAI Code Review
-
+```yaml
+name: AI Code Review
 on:
   pull_request:
     types: [opened, synchronize, reopened]
-
+permissions:
+  contents: read
+  pull-requests: write
 jobs:
-  ai-review:
+  review:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: aireviewer/action@v2
         with:
-          node-version: '20'
-      
-      - name: Install dependencies
-        run: npm install
-      
-      - name: Run AI Review and Summary
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SRC_FOLDER_PATTERN: "**/src/**/*.js, **/src/**/*.ts, **/src/**/*.html, **/src/**/*.scss"
-          AI_MODEL: "gpt-4o-mini"
-        run: node node_modules/aireviewer/src/scripts/openai/index.js
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          # anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
+          # gemini-api-key:    ${{ secrets.GEMINI_API_KEY }}
 ```
 
+That's it. With no config file, the runner infers a sensible default from whichever API key is present.
 
-## Contact
+## Configuration
 
-For any questions or feedback, please email us on `navdeep.singh@solugenix.com`.
+Drop `.aireviewerrc.yml` in your repo root for full control:
+
+```yaml
+extends:
+  - preset:react
+
+providers:
+  - name: anthropic
+    kind: anthropic
+    model: claude-sonnet-4-6
+    apiKeyEnv: ANTHROPIC_API_KEY
+  - name: openai
+    kind: openai
+    model: gpt-4o-mini
+    apiKeyEnv: OPENAI_API_KEY
+
+defaultProvider: anthropic
+fallback: [openai]
+
+routes:
+  - { match: "**/*.sql", provider: openai }
+
+review:
+  include: ["**/src/**/*.{ts,tsx,js,jsx}"]
+  exclude: ["**/*.test.*", "dist/**"]
+  mode: diff # diff | full-file | hybrid
+  minSeverity: suggestion
+  maxCommentsPerFile: 8
+  maxCostUsd: 1.00
+  skipLabels: [no-ai-review, wip]
+  cache: file
+  concurrency: 4
+
+rules:
+  - id: no-console-log
+    severity: issue
+    description: Disallow console.log in committed source.
+
+prompts:
+  systemAddendum: |
+    Our team strongly prefers functional patterns over class hierarchies.
+
+reporters:
+  - kind: github
+    publishSummaryComment: true
+    updatePrDescription: false
+```
+
+Built-in presets: `preset:react`, `preset:node`, `preset:python`, `preset:go`. Local files also work in `extends:` (e.g. `./.aireviewer/team-rules.yml`).
+
+## How to use
+
+### 1. Review every pull request automatically (recommended)
+
+Use the composite GitHub Action shown in [Quick start](#quick-start-recommended-composite-action). Every `opened` / `synchronize` / `reopened` event triggers a fresh review. Findings are posted as a single batched PR review (one API call, not one per comment).
+
+Required GitHub Secrets:
+
+| Secret | When |
+|---|---|
+| `OPENAI_API_KEY` | Using OpenAI provider |
+| `ANTHROPIC_API_KEY` | Using Anthropic provider |
+| `GEMINI_API_KEY` | Using Gemini provider |
+
+The Action also needs `pull-requests: write` permission — already set in the Quick-start workflow.
+
+### 2. Run locally before pushing
+
+```bash
+npm install -g aireviewer            # or use npx aireviewer
+export OPENAI_API_KEY=sk-...
+aireviewer review --base origin/main --head HEAD
+```
+
+By default with no `GITHUB_TOKEN`, output goes to stdout instead of trying to post comments. Add `--json review.json` to also write structured findings for tooling.
+
+### 3. Review an existing GitHub PR from your machine
+
+```bash
+export GITHUB_TOKEN=ghp_...
+export OPENAI_API_KEY=sk-...
+aireviewer review --pr 123 --owner my-org --repo my-repo
+```
+
+This fetches the PR's files via the GitHub API and posts a real review — useful for re-reviewing after editing your config.
+
+### 4. Bootstrap config and check it
+
+```bash
+aireviewer init        # writes a starter .aireviewerrc.yml
+aireviewer doctor      # validates config, lists providers, checks API keys
+```
+
+`doctor` prints which providers are configured, whether their API keys are present, and which reporters will run.
+
+### 5. Switch or combine providers
+
+Single provider — change `providers[*].kind` and `model`:
+
+```yaml
+providers:
+  - name: claude
+    kind: anthropic
+    model: claude-sonnet-4-6
+    apiKeyEnv: ANTHROPIC_API_KEY
+defaultProvider: claude
+```
+
+Fallback chain (try the next provider if the first errors or rate-limits):
+
+```yaml
+providers:
+  - { name: claude, kind: anthropic, model: claude-sonnet-4-6, apiKeyEnv: ANTHROPIC_API_KEY }
+  - { name: gpt,    kind: openai,    model: gpt-4o-mini,       apiKeyEnv: OPENAI_API_KEY }
+defaultProvider: claude
+fallback: [gpt]
+```
+
+Per-file routing (different model for SQL or migrations):
+
+```yaml
+routes:
+  - { match: "**/*.sql",                 provider: gpt }
+  - { match: "db/migrations/**/*.{ts,js}", provider: gpt }
+  - { match: "**/*",                      provider: claude }
+```
+
+Local LLM (no API key needed; requires Ollama running on the host):
+
+```yaml
+providers:
+  - name: local
+    kind: ollama
+    model: qwen2.5-coder:14b
+    baseUrl: http://localhost:11434
+defaultProvider: local
+```
+
+### 6. Add custom rules and a team prompt
+
+```yaml
+rules:
+  - id: no-console-log
+    severity: issue
+    description: Disallow console.log in committed source.
+    files: ["**/src/**/*.{ts,js}"]
+  - id: require-jsdoc
+    severity: suggestion
+    description: Public exported functions should have JSDoc with @param/@returns.
+
+prompts:
+  systemAddendum: |
+    Prefer functional patterns over class hierarchies.
+    Flag any new dependencies introduced in package.json.
+```
+
+Rules are passed into the system prompt for files they apply to. The model attaches `rule_id` to findings, which the clusterer uses to group repeat offenders in the PR summary.
+
+### 7. Skip a review for a specific PR
+
+Add one of the configured `skipLabels` (default: `no-ai-review`, `wip`) to the PR. The Action exits without posting anything.
+
+### 8. Cap cost per PR
+
+```yaml
+review:
+  maxCostUsd: 0.50          # abort when running cost reaches $0.50
+  maxCommentsPerFile: 6      # cap noise
+  minSeverity: issue         # drop info/suggestion
+```
+
+The total cost is included in the summary comment posted on the PR.
+
+### 9. Use the structured JSON output
+
+```bash
+aireviewer review --base origin/main --head HEAD --json findings.json
+jq '.files[] | select(.findings | length > 0) | .path' findings.json
+```
+
+The JSON includes every finding plus `costUsd`, token counts per file, recurring-finding clusters, and timestamps — handy for CI gating ("fail if any `critical` finding") or building dashboards.
+
+### 10. Programmatic use as a library
+
+```ts
+import { ReviewEngine, loadConfig, buildFileChange } from "aireviewer";
+import { ProviderRegistry, OpenAIProvider } from "aireviewer";
+import { StdoutReporter } from "aireviewer";
+import { FileCache } from "aireviewer";
+
+const config = loadConfig();
+const registry = new ProviderRegistry().register(
+  new OpenAIProvider({
+    name: "openai",
+    kind: "openai",
+    model: "gpt-4o-mini",
+    apiKey: process.env.OPENAI_API_KEY!,
+  }),
+  { default: true },
+);
+
+const engine = new ReviewEngine({
+  config,
+  registry,
+  reporters: [new StdoutReporter()],
+  cache: new FileCache(".aireviewer-cache"),
+});
+
+const files = [
+  buildFileChange({ filename: "src/x.ts", status: "modified", patch: myPatch }),
+];
+const report = await engine.run({ files });
+console.log(`Findings: ${report.files.flatMap((f) => f.findings).length}`);
+```
+
+### Environment variables (cheat sheet)
+
+| Variable | Purpose |
+|---|---|
+| `GITHUB_TOKEN` | Required when posting GitHub PR comments. |
+| `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `GEMINI_API_KEY` | Provider credentials. |
+| `AI_MODEL` | Override default model when no config file is present. |
+| `SRC_FOLDER_PATTERN` | Comma-separated globs (only used when no config file). |
+| `AIREVIEWER_LOG_LEVEL` | `trace`, `debug`, `info` (default), `warn`, `error`. |
+| `AIREVIEWER_SKIP_POSTINSTALL` | Set to `1` to suppress the legacy postinstall workflow copy. |
+
+## Architecture
+
+```
+ReviewEngine
+  ├─ DiffParser ──────── changed hunks, language detection
+  ├─ Chunker ─────────── token-aware splitting
+  ├─ Cache ───────────── content-hash, file-backed
+  ├─ ProviderRegistry ── routes + fallback chain
+  │     ├─ OpenAIProvider (structured outputs)
+  │     ├─ AnthropicProvider (tool-use + prompt cache)
+  │     ├─ GeminiProvider (responseSchema)
+  │     └─ OllamaProvider (local, format=json-schema)
+  ├─ Filter ──────────── severity threshold, max-per-file, diff-only
+  ├─ Cluster ─────────── group recurring findings across files
+  └─ Reporter[]
+        ├─ GitHubReporter (batched createReview)
+        ├─ StdoutReporter
+        └─ JsonFileReporter
+```
+
+## Development
+
+```bash
+npm install
+npm run typecheck
+npm test
+npm run build
+```
+
+## Migration from v1.x
+
+The `postinstall` install path still works for one major version with a deprecation notice. Migrate to the composite Action when convenient. Set `AIREVIEWER_SKIP_POSTINSTALL=1` to suppress the install-time copy.
+
+## License
+
+ISC

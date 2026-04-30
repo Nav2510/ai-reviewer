@@ -1,29 +1,25 @@
-name: OpenAI Code Review
+name: AI Code Review
 
 on:
   pull_request:
     types: [opened, synchronize, reopened]
 
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   ai-review:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
-          node-version: '20'
-      
-      - name: Install dependencies
-        run: npm install
-      
-      - name: Run AI Review and Summary
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SRC_FOLDER_PATTERN: "**/src/**/*.js, **/src/**/*.ts, **/src/**/*.html, **/src/**/*.scss"
-          AI_MODEL: "gpt-4o-mini"
-        run: node node_modules/ai-reviewer/src/scripts/openai/index.js
+          fetch-depth: 0
+
+      - name: AI Review
+        uses: aireviewer/action@v2
+        with:
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
+          gemini-api-key: ${{ secrets.GEMINI_API_KEY }}

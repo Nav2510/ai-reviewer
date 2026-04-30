@@ -1,0 +1,65 @@
+name: AI Reviewer
+description: Provider-agnostic, diff-aware AI code reviewer for pull requests.
+author: Solugenix
+branding:
+  icon: eye
+  color: purple
+
+inputs:
+  github-token:
+    description: Token used to fetch PR files and post review comments.
+    required: false
+    default: ${{ github.token }}
+  config:
+    description: Path to .aireviewerrc.yml (default discovers in repo root).
+    required: false
+  openai-api-key:
+    description: OpenAI API key (forwarded as OPENAI_API_KEY).
+    required: false
+  anthropic-api-key:
+    description: Anthropic API key (forwarded as ANTHROPIC_API_KEY).
+    required: false
+  gemini-api-key:
+    description: Google Gemini API key (forwarded as GEMINI_API_KEY).
+    required: false
+
+outputs:
+  findings:
+    description: Total number of findings posted across all files.
+    value: ${{ steps.review.outputs.findings }}
+  cost-usd:
+    description: Estimated total cost in USD.
+    value: ${{ steps.review.outputs.cost-usd }}
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: "20"
+
+    - name: Restore aireviewer cache
+      uses: actions/cache@v4
+      with:
+        path: .aireviewer-cache
+        key: aireviewer-${{ github.event.pull_request.head.sha }}
+        restore-keys: |
+          aireviewer-
+
+    - name: Install aireviewer
+      shell: bash
+      run: |
+        npm install --no-save --no-audit --no-fund aireviewer@latest
+
+    - name: Run AI Review
+      id: review
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        OPENAI_API_KEY: ${{ inputs.openai-api-key }}
+        ANTHROPIC_API_KEY: ${{ inputs.anthropic-api-key }}
+        GEMINI_API_KEY: ${{ inputs.gemini-api-key }}
+        AIREVIEWER_CONFIG: ${{ inputs.config }}
+      run: |
+        node node_modules/aireviewer/dist/runners/action.js
