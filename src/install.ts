@@ -14,9 +14,8 @@ function findConsumerRoot(): string | undefined {
   }
   return undefined;
 }
-
 export function installWorkflow(): void {
-  if (process.env.ai - reviewer_SKIP_POSTINSTALL === "1") return;
+  if (process.env.AIREVIEWER_SKIP_POSTINSTALL === "1") return;
   try {
     const consumer = findConsumerRoot();
     if (!consumer) return;

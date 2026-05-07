@@ -258,8 +258,8 @@ console.log(`Findings: ${report.files.flatMap((f) => f.findings).length}`);
 | `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `GEMINI_API_KEY` | Provider credentials.                                        |
 | `AI_MODEL`                                                | Override default model when no config file is present.       |
 | `SRC_FOLDER_PATTERN`                                      | Comma-separated globs (only used when no config file).       |
-| `ai-reviewer_LOG_LEVEL`                                   | `trace`, `debug`, `info` (default), `warn`, `error`.         |
-| `ai-reviewer_SKIP_POSTINSTALL`                            | Set to `1` to suppress the legacy postinstall workflow copy. |
+| `AIREVIEWER_LOG_LEVEL`                                    | `trace`, `debug`, `info` (default), `warn`, `error`. Auto-promotes to `debug` when GitHub Actions debug logging is enabled (`RUNNER_DEBUG=1` / `ACTIONS_STEP_DEBUG=true`). |
+| `AIREVIEWER_SKIP_POSTINSTALL`                             | Set to `1` to suppress the legacy postinstall workflow copy. |
 
 ## Architecture
 
@@ -292,7 +292,7 @@ npm run build
 
 ## Migration from v1.x
 
-The `postinstall` install path still works for one major version with a deprecation notice. Migrate to the composite Action when convenient. Set `ai-reviewer_SKIP_POSTINSTALL=1` to suppress the install-time copy.
+The `postinstall` install path still works for one major version with a deprecation notice. Migrate to the composite Action when convenient. Set `AIREVIEWER_SKIP_POSTINSTALL=1` to suppress the install-time copy.
 
 ## License
 
