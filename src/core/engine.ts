@@ -1,7 +1,7 @@
 import { minimatch } from "minimatch";
 import { logger } from "./logger.js";
 import { mapWithLimit } from "./concurrency.js";
-import { changedLineSet } from "./diff.js";
+import { changedLineSet, newSideLineMap } from "./diff.js";
 import { filterFindings } from "./filter.js";
 import { clusterFindings, type FileFindings } from "./cluster.js";
 import { hashKey, type ReviewCache } from "./cache.js";
@@ -147,7 +147,8 @@ export class ReviewEngine {
           if (response.costUsd) runningCost += response.costUsd;
 
           const changedLines = changedLineSet(file);
-          const findings: Finding[] = filterFindings(response.result.changes, {
+          const verified = verifyFindingLines(response.result.changes, file);
+          const findings: Finding[] = filterFindings(verified, {
             minSeverity: cfg.review.minSeverity,
             maxPerFile: cfg.review.maxCommentsPerFile,
             changedLines,
@@ -188,4 +189,48 @@ export class ReviewEngine {
     }
     return report;
   }
+}
+
+function normalize(s: string): string {
+  return s.replace(/\s+/g, " ").trim();
+}
+
+function verifyFindingLines(findings: Finding[], file: FileChange): Finding[] {
+  const lineMap = newSideLineMap(file);
+  if (lineMap.size === 0) return findings;
+  const out: Finding[] = [];
+  for (const f of findings) {
+    const actual = lineMap.get(f.line);
+    if (actual === undefined) {
+      logger.debug(
+        { file: file.path, line: f.line, claimed: f.originalCode },
+        "Dropping finding: line not present in diff",
+      );
+      continue;
+    }
+    if (!f.originalCode || normalize(actual) === normalize(f.originalCode)) {
+      out.push(f);
+      continue;
+    }
+    let shifted: number | undefined;
+    for (const [n, content] of lineMap.entries()) {
+      if (normalize(content) === normalize(f.originalCode)) {
+        shifted = n;
+        break;
+      }
+    }
+    if (shifted !== undefined) {
+      logger.debug(
+        { file: file.path, from: f.line, to: shifted, claimed: f.originalCode },
+        "Shifting finding to match original_code",
+      );
+      out.push({ ...f, line: shifted });
+    } else {
+      logger.debug(
+        { file: file.path, line: f.line, actual, claimed: f.originalCode },
+        "Dropping finding: original_code does not match line content",
+      );
+    }
+  }
+  return out;
 }

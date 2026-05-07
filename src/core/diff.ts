@@ -94,3 +94,20 @@ export function changedLineSet(file: FileChange): Set<number> {
   for (const h of file.hunks) for (const ln of h.changedLines) s.add(ln);
   return s;
 }
+
+export function newSideLineMap(file: FileChange): Map<number, string> {
+  const map = new Map<number, string>();
+  for (const h of file.hunks) {
+    let n = h.newStart;
+    for (const raw of h.content.split("\n")) {
+      if (raw === "") continue;
+      const marker = raw[0];
+      const rest = raw.slice(1);
+      if (marker === "+" || marker === " ") {
+        map.set(n, rest);
+        n++;
+      }
+    }
+  }
+  return map;
+}

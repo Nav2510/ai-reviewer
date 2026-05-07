@@ -38,7 +38,32 @@ export function chunkHunks(hunks: DiffHunk[], maxTokens: number): HunkChunk[] {
 }
 
 export function renderHunksForPrompt(hunks: DiffHunk[]): string {
-  return hunks
-    .map((h) => `@@ ${h.header || `-${h.oldStart},${h.oldLines} +${h.newStart},${h.newLines}`}\n${h.content}`)
-    .join("\n\n");
+  return hunks.map(renderHunkWithLineNumbers).join("\n\n");
+}
+
+function renderHunkWithLineNumbers(h: DiffHunk): string {
+  const header = `@@ ${h.header || `-${h.oldStart},${h.oldLines} +${h.newStart},${h.newLines}`}`;
+  const maxLine = h.newStart + h.newLines;
+  const pad = String(maxLine).length;
+  const blank = " ".repeat(pad);
+
+  let newLine = h.newStart;
+  const out: string[] = [header];
+  for (const raw of h.content.split("\n")) {
+    if (raw === "") continue;
+    const marker = raw[0];
+    const rest = raw.slice(1);
+    if (marker === "-") {
+      out.push(`${blank} - ${rest}`);
+    } else if (marker === "+") {
+      out.push(`${String(newLine).padStart(pad, " ")} + ${rest}`);
+      newLine++;
+    } else if (marker === " ") {
+      out.push(`${String(newLine).padStart(pad, " ")}   ${rest}`);
+      newLine++;
+    } else {
+      out.push(raw);
+    }
+  }
+  return out.join("\n");
 }

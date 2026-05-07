@@ -8,7 +8,7 @@ export const FindingSchema = z.object({
   document: z.string().nullable(),
   type: z.enum(["issue", "suggestion", "document"]),
   severity: z.enum(["info", "suggestion", "issue", "critical"]).default("suggestion"),
-  rule_id: z.string().optional(),
+  rule_id: z.string().nullable().optional(),
 });
 
 export const ReviewResponseSchema = z.object({
@@ -40,7 +40,7 @@ export function toJsonSchema(): Record<string, unknown> {
               type: "string",
               enum: ["info", "suggestion", "issue", "critical"],
             },
-            rule_id: { type: "string" },
+            rule_id: { type: ["string", "null"] },
           },
           required: [
             "line",
@@ -50,6 +50,7 @@ export function toJsonSchema(): Record<string, unknown> {
             "document",
             "type",
             "severity",
+            "rule_id",
           ],
         },
       },
@@ -68,6 +69,6 @@ export function normalizeFinding(raw: RawFinding) {
     document: raw.document,
     type: raw.type,
     severity: raw.severity,
-    ruleId: raw.rule_id,
+    ruleId: raw.rule_id ?? undefined,
   };
 }

@@ -12,11 +12,18 @@ export interface PromptContext {
 
 const BASE_SYSTEM = `You are a precise, terse code-review assistant.
 Your output MUST conform to the supplied schema.
-For each finding, set:
-- "line" to the line number in the file's NEW (post-change) view
-- "severity" to one of: info, suggestion, issue, critical
-- "type" to one of: issue, suggestion, document
-- "rule_id" if the finding maps to a known rule
+
+LINE NUMBERS:
+Each line in the diff is prefixed with its line number in the NEW (post-change) file, formatted as "<N> + ..." for added lines, "<N>   ..." for context lines, and "  - ..." for removed lines (no number — you cannot comment on removed lines).
+- Set "line" to the EXACT integer prefix of the line you are commenting on. Do not count manually — copy the number you see.
+- Only comment on lines marked "+" (added) or "  " (context). Never use a line number from a "-" (removed) line.
+- Set "original_code" to the verbatim text of that line (without the "<N> + " or "<N>   " prefix). This MUST match the line at the "line" number; if it doesn't, your finding is wrong — drop it.
+
+Other fields:
+- "severity" — one of: info, suggestion, issue, critical
+- "type" — one of: issue, suggestion, document
+- "rule_id" — set if the finding maps to a known project rule, otherwise null
+
 Prefer fewer, higher-signal findings over noisy ones.
 Skip purely stylistic nits unless explicitly requested by rules.`;
 
