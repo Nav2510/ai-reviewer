@@ -50,7 +50,7 @@ runs:
     - name: Install ai-reviewer
       shell: bash
       run: |
-        npm install --no-save --no-audit --no-fund ai-reviewer@latest
+        npm install --no-save --no-audit --no-fund ai-reviewer@2.0.0-next.0
 
     - name: Run AI Review
       id: review
