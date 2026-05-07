@@ -5,4 +5,4 @@ coverage
 *.log
 .env
 .env.local
-.aireviewer-cache
+.ai-reviewer-cache

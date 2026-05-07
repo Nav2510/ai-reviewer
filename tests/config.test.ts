@@ -15,7 +15,7 @@ describe("config loader", () => {
   });
 
   it("loads yaml and applies defaults", () => {
-    const file = path.join(dir, ".aireviewerrc.yml");
+    const file = path.join(dir, ".ai-reviewerrc.yml");
     fs.writeFileSync(
       file,
       `providers:
@@ -33,7 +33,7 @@ describe("config loader", () => {
 
   it("substitutes apiKeyEnv", () => {
     process.env.OPENAI_API_KEY = "sk-from-env";
-    const file = path.join(dir, ".aireviewerrc.yml");
+    const file = path.join(dir, ".ai-reviewerrc.yml");
     fs.writeFileSync(
       file,
       `providers:
@@ -54,7 +54,7 @@ describe("config loader", () => {
   });
 
   it("applies preset extends", () => {
-    const file = path.join(dir, ".aireviewerrc.yml");
+    const file = path.join(dir, ".ai-reviewerrc.yml");
     fs.writeFileSync(
       file,
       `extends:

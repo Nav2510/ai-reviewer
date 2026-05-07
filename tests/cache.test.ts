@@ -26,7 +26,7 @@ describe("cache", () => {
   describe("FileCache", () => {
     let dir: string;
     beforeEach(() => {
-      dir = fs.mkdtempSync(path.join(os.tmpdir(), "aireviewer-"));
+      dir = fs.mkdtempSync(path.join(os.tmpdir(), "ai-reviewer-"));
     });
     afterEach(() => {
       fs.rmSync(dir, { recursive: true, force: true });

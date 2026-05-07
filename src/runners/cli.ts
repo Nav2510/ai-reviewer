@@ -44,10 +44,13 @@ function localDiffFiles(base: string, head: string) {
     const [statusRaw, ...rest] = line.split("\t");
     const filename = rest[rest.length - 1];
     if (!statusRaw || !filename) continue;
-    const status =
-      statusRaw.startsWith("A") ? "added" :
-      statusRaw.startsWith("D") ? "removed" :
-      statusRaw.startsWith("R") ? "renamed" : "modified";
+    const status = statusRaw.startsWith("A")
+      ? "added"
+      : statusRaw.startsWith("D")
+        ? "removed"
+        : statusRaw.startsWith("R")
+          ? "renamed"
+          : "modified";
     let patch = "";
     try {
       patch = execSync(`git diff ${base}...${head} -- "${filename}"`, { encoding: "utf8" });
@@ -108,7 +111,8 @@ async function runReview(args: CliArgs): Promise<void> {
 
   if (args.dryRun) {
     logger.info({ count: files.length }, "Dry-run: files that would be reviewed");
-    for (const f of files) process.stdout.write(`${f.status} ${f.path} (${f.hunks.length} hunks)\n`);
+    for (const f of files)
+      process.stdout.write(`${f.status} ${f.path} (${f.hunks.length} hunks)\n`);
     return;
   }
 
@@ -118,12 +122,12 @@ async function runReview(args: CliArgs): Promise<void> {
 }
 
 async function runInit(): Promise<void> {
-  const target = ".aireviewerrc.yml";
+  const target = ".ai-reviewerrc.yml";
   if (fs.existsSync(target)) {
     logger.warn({ target }, "config already exists; not overwriting");
     return;
   }
-  const sample = `# .aireviewerrc.yml
+  const sample = `# .ai-reviewerrc.yml
 providers:
   - name: openai
     kind: openai
@@ -159,7 +163,9 @@ async function runDoctor(args: CliArgs): Promise<void> {
   const file = args.configPath ?? findConfigFile();
   process.stdout.write(`Config file: ${file ?? "(none, env-inferred)"}\n`);
   const cfg = loadConfig(file);
-  process.stdout.write(`Providers: ${cfg.providers.map((p) => `${p.name}(${p.kind}/${p.model})`).join(", ")}\n`);
+  process.stdout.write(
+    `Providers: ${cfg.providers.map((p) => `${p.name}(${p.kind}/${p.model})`).join(", ")}\n`,
+  );
   for (const p of cfg.providers) {
     const ok = !!(p.apiKey ?? (p.apiKeyEnv && process.env[p.apiKeyEnv]));
     process.stdout.write(`  ${ok ? "✓" : "✗"} ${p.name}: api key ${ok ? "present" : "MISSING"}\n`);
@@ -182,7 +188,7 @@ export async function runCli(argv: string[] = process.argv): Promise<void> {
       break;
     default:
       process.stdout.write(
-        "Usage: aireviewer <review|init|doctor> [--base <ref>] [--head <ref>] [--pr <num> --owner <o> --repo <r>] [--config <path>] [--json <path>] [--dry-run]\n",
+        "Usage: ai-reviewer <review|init|doctor> [--base <ref>] [--head <ref>] [--pr <num> --owner <o> --repo <r>] [--config <path>] [--json <path>] [--dry-run]\n",
       );
   }
 }

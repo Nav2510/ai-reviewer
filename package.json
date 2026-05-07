@@ -1,5 +1,5 @@
 {
-  "name": "aireviewer",
+  "name": "ai-reviewer",
   "version": "2.0.0-next.0",
   "description": "Provider-agnostic, diff-aware AI code reviewer for pull requests.",
   "type": "module",
@@ -20,7 +20,7 @@
     }
   },
   "bin": {
-    "aireviewer": "bin/aireviewer.js"
+    "ai-reviewer": "bin/ai-reviewer.js"
   },
   "files": [
     "dist",
@@ -41,7 +41,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Enovative-Solugenix/aireviewer.git"
+    "url": "git+https://github.com/Enovative-Solugenix/ai-reviewer.git"
   },
   "author": "Navdeep Singh",
   "license": "ISC",

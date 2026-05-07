@@ -16,7 +16,7 @@ function findConsumerRoot(): string | undefined {
 }
 
 export function installWorkflow(): void {
-  if (process.env.AIREVIEWER_SKIP_POSTINSTALL === "1") return;
+  if (process.env.ai - reviewer_SKIP_POSTINSTALL === "1") return;
   try {
     const consumer = findConsumerRoot();
     if (!consumer) return;
@@ -29,20 +29,20 @@ export function installWorkflow(): void {
     const destDir = path.join(consumer, ".github", "workflows");
     const destPath = path.join(destDir, "review.yml");
     if (fs.existsSync(destPath)) {
-      console.log("[aireviewer] .github/workflows/review.yml already exists; not overwriting.");
+      console.log("[ai-reviewer] .github/workflows/review.yml already exists; not overwriting.");
       console.log(
-        "[aireviewer] DEPRECATION: postinstall workflow copy will be removed in v4. Migrate to the composite action: `uses: aireviewer/action@v2`.",
+        "[ai-reviewer] DEPRECATION: postinstall workflow copy will be removed in v4. Migrate to the composite action: `uses: ai-reviewer/action@v2`.",
       );
       return;
     }
     fs.mkdirSync(destDir, { recursive: true });
     fs.copyFileSync(source, destPath);
-    console.log("[aireviewer] installed .github/workflows/review.yml");
+    console.log("[ai-reviewer] installed .github/workflows/review.yml");
     console.log(
-      "[aireviewer] DEPRECATION: postinstall workflow copy will be removed in v4. Prefer the composite action: `uses: aireviewer/action@v2`.",
+      "[ai-reviewer] DEPRECATION: postinstall workflow copy will be removed in v4. Prefer the composite action: `uses: ai-reviewer/action@v2`.",
     );
   } catch (err) {
-    console.log("[aireviewer] postinstall skipped:", (err as Error)?.message);
+    console.log("[ai-reviewer] postinstall skipped:", (err as Error)?.message);
   }
 }
 

@@ -6,12 +6,12 @@ import { PRESETS } from "./presets.js";
 import { logger } from "../core/logger.js";
 
 const DEFAULT_FILES = [
-  ".aireviewerrc.yml",
-  ".aireviewerrc.yaml",
-  ".aireviewerrc.json",
-  "aireviewer.config.yml",
-  "aireviewer.config.yaml",
-  "aireviewer.config.json",
+  ".ai-reviewerrc.yml",
+  ".ai-reviewerrc.yaml",
+  ".ai-reviewerrc.json",
+  "ai-reviewer.config.yml",
+  "ai-reviewer.config.yaml",
+  "ai-reviewer.config.json",
 ];
 
 function readFile(file: string): unknown {
@@ -117,10 +117,12 @@ function inferFromEnv(): ConfigInput {
   }
   if (providers.length === 0) {
     throw new Error(
-      "No provider configured. Set OPENAI_API_KEY / ANTHROPIC_API_KEY / GEMINI_API_KEY or create .aireviewerrc.yml.",
+      "No provider configured. Set OPENAI_API_KEY / ANTHROPIC_API_KEY / GEMINI_API_KEY or create .ai-reviewerrc.yml.",
     );
   }
-  const include = process.env.SRC_FOLDER_PATTERN?.split(",").map((s) => s.trim()).filter(Boolean);
+  const include = process.env.SRC_FOLDER_PATTERN?.split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
   return {
     providers,
     review: include ? { include } : undefined,

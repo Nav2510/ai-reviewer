@@ -79,7 +79,7 @@ export class GitHubReporter implements Reporter {
       repo: this.cfg.repo,
       pull_number: this.cfg.pullNumber,
     });
-    const marker = "<!-- aireviewer:summary -->";
+    const marker = "<!-- ai-reviewer:summary -->";
     const block = `${marker}\n## AI Review Summary\n${report.files
       .map((f) => `### \`${f.path}\`\n${f.summary}`)
       .join("\n\n")}\n${marker}`;
@@ -107,7 +107,13 @@ export class GitHubReporter implements Reporter {
       lines.push("", "```suggestion", finding.suggestedChange, "```");
     }
     if (finding.document) {
-      lines.push("", "<details><summary>Suggested doc</summary>", "", finding.document, "</details>");
+      lines.push(
+        "",
+        "<details><summary>Suggested doc</summary>",
+        "",
+        finding.document,
+        "</details>",
+      );
     }
     return lines.join("\n");
   }
@@ -119,7 +125,9 @@ export class GitHubReporter implements Reporter {
     const clusterLines = report.clusters
       .filter((c) => c.count > 1)
       .slice(0, 5)
-      .map((c) => `- **${c.severity} · ${c.type}** ×${c.count} — ${c.examples[0]?.explanation ?? ""}`)
+      .map(
+        (c) => `- **${c.severity} · ${c.type}** ×${c.count} — ${c.examples[0]?.explanation ?? ""}`,
+      )
       .join("\n");
     const cost = report.totalCostUsd ? `$${report.totalCostUsd.toFixed(4)}` : "n/a";
     return [

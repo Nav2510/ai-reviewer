@@ -26,7 +26,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
-      - uses: aireviewer/action@v2
+      - uses: ai-reviewer/action@v2
         with:
           openai-api-key: ${{ secrets.OPENAI_API_KEY }}
           # anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -37,7 +37,7 @@ That's it. With no config file, the runner infers a sensible default from whiche
 
 ## Configuration
 
-Drop `.aireviewerrc.yml` in your repo root for full control:
+Drop `.ai-reviewerrc.yml` in your repo root for full control:
 
 ```yaml
 extends:
@@ -85,7 +85,7 @@ reporters:
     updatePrDescription: false
 ```
 
-Built-in presets: `preset:react`, `preset:node`, `preset:python`, `preset:go`. Local files also work in `extends:` (e.g. `./.aireviewer/team-rules.yml`).
+Built-in presets: `preset:react`, `preset:node`, `preset:python`, `preset:go`. Local files also work in `extends:` (e.g. `./.ai-reviewer/team-rules.yml`).
 
 ## How to use
 
@@ -95,20 +95,20 @@ Use the composite GitHub Action shown in [Quick start](#quick-start-recommended-
 
 Required GitHub Secrets:
 
-| Secret | When |
-|---|---|
-| `OPENAI_API_KEY` | Using OpenAI provider |
+| Secret              | When                     |
+| ------------------- | ------------------------ |
+| `OPENAI_API_KEY`    | Using OpenAI provider    |
 | `ANTHROPIC_API_KEY` | Using Anthropic provider |
-| `GEMINI_API_KEY` | Using Gemini provider |
+| `GEMINI_API_KEY`    | Using Gemini provider    |
 
 The Action also needs `pull-requests: write` permission — already set in the Quick-start workflow.
 
 ### 2. Run locally before pushing
 
 ```bash
-npm install -g aireviewer            # or use npx aireviewer
+npm install -g ai-reviewer            # or use npx ai-reviewer
 export OPENAI_API_KEY=sk-...
-aireviewer review --base origin/main --head HEAD
+ai-reviewer review --base origin/main --head HEAD
 ```
 
 By default with no `GITHUB_TOKEN`, output goes to stdout instead of trying to post comments. Add `--json review.json` to also write structured findings for tooling.
@@ -118,7 +118,7 @@ By default with no `GITHUB_TOKEN`, output goes to stdout instead of trying to po
 ```bash
 export GITHUB_TOKEN=ghp_...
 export OPENAI_API_KEY=sk-...
-aireviewer review --pr 123 --owner my-org --repo my-repo
+ai-reviewer review --pr 123 --owner my-org --repo my-repo
 ```
 
 This fetches the PR's files via the GitHub API and posts a real review — useful for re-reviewing after editing your config.
@@ -126,8 +126,8 @@ This fetches the PR's files via the GitHub API and posts a real review — usefu
 ### 4. Bootstrap config and check it
 
 ```bash
-aireviewer init        # writes a starter .aireviewerrc.yml
-aireviewer doctor      # validates config, lists providers, checks API keys
+ai-reviewer init        # writes a starter .ai-reviewerrc.yml
+ai-reviewer doctor      # validates config, lists providers, checks API keys
 ```
 
 `doctor` prints which providers are configured, whether their API keys are present, and which reporters will run.
@@ -150,7 +150,7 @@ Fallback chain (try the next provider if the first errors or rate-limits):
 ```yaml
 providers:
   - { name: claude, kind: anthropic, model: claude-sonnet-4-6, apiKeyEnv: ANTHROPIC_API_KEY }
-  - { name: gpt,    kind: openai,    model: gpt-4o-mini,       apiKeyEnv: OPENAI_API_KEY }
+  - { name: gpt, kind: openai, model: gpt-4o-mini, apiKeyEnv: OPENAI_API_KEY }
 defaultProvider: claude
 fallback: [gpt]
 ```
@@ -159,9 +159,9 @@ Per-file routing (different model for SQL or migrations):
 
 ```yaml
 routes:
-  - { match: "**/*.sql",                 provider: gpt }
+  - { match: "**/*.sql", provider: gpt }
   - { match: "db/migrations/**/*.{ts,js}", provider: gpt }
-  - { match: "**/*",                      provider: claude }
+  - { match: "**/*", provider: claude }
 ```
 
 Local LLM (no API key needed; requires Ollama running on the host):
@@ -203,9 +203,9 @@ Add one of the configured `skipLabels` (default: `no-ai-review`, `wip`) to the P
 
 ```yaml
 review:
-  maxCostUsd: 0.50          # abort when running cost reaches $0.50
-  maxCommentsPerFile: 6      # cap noise
-  minSeverity: issue         # drop info/suggestion
+  maxCostUsd: 0.50 # abort when running cost reaches $0.50
+  maxCommentsPerFile: 6 # cap noise
+  minSeverity: issue # drop info/suggestion
 ```
 
 The total cost is included in the summary comment posted on the PR.
@@ -213,7 +213,7 @@ The total cost is included in the summary comment posted on the PR.
 ### 9. Use the structured JSON output
 
 ```bash
-aireviewer review --base origin/main --head HEAD --json findings.json
+ai-reviewer review --base origin/main --head HEAD --json findings.json
 jq '.files[] | select(.findings | length > 0) | .path' findings.json
 ```
 
@@ -222,10 +222,10 @@ The JSON includes every finding plus `costUsd`, token counts per file, recurring
 ### 10. Programmatic use as a library
 
 ```ts
-import { ReviewEngine, loadConfig, buildFileChange } from "aireviewer";
-import { ProviderRegistry, OpenAIProvider } from "aireviewer";
-import { StdoutReporter } from "aireviewer";
-import { FileCache } from "aireviewer";
+import { ReviewEngine, loadConfig, buildFileChange } from "ai-reviewer";
+import { ProviderRegistry, OpenAIProvider } from "ai-reviewer";
+import { StdoutReporter } from "ai-reviewer";
+import { FileCache } from "ai-reviewer";
 
 const config = loadConfig();
 const registry = new ProviderRegistry().register(
@@ -242,26 +242,24 @@ const engine = new ReviewEngine({
   config,
   registry,
   reporters: [new StdoutReporter()],
-  cache: new FileCache(".aireviewer-cache"),
+  cache: new FileCache(".ai-reviewer-cache"),
 });
 
-const files = [
-  buildFileChange({ filename: "src/x.ts", status: "modified", patch: myPatch }),
-];
+const files = [buildFileChange({ filename: "src/x.ts", status: "modified", patch: myPatch })];
 const report = await engine.run({ files });
 console.log(`Findings: ${report.files.flatMap((f) => f.findings).length}`);
 ```
 
 ### Environment variables (cheat sheet)
 
-| Variable | Purpose |
-|---|---|
-| `GITHUB_TOKEN` | Required when posting GitHub PR comments. |
-| `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `GEMINI_API_KEY` | Provider credentials. |
-| `AI_MODEL` | Override default model when no config file is present. |
-| `SRC_FOLDER_PATTERN` | Comma-separated globs (only used when no config file). |
-| `AIREVIEWER_LOG_LEVEL` | `trace`, `debug`, `info` (default), `warn`, `error`. |
-| `AIREVIEWER_SKIP_POSTINSTALL` | Set to `1` to suppress the legacy postinstall workflow copy. |
+| Variable                                                  | Purpose                                                      |
+| --------------------------------------------------------- | ------------------------------------------------------------ |
+| `GITHUB_TOKEN`                                            | Required when posting GitHub PR comments.                    |
+| `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `GEMINI_API_KEY` | Provider credentials.                                        |
+| `AI_MODEL`                                                | Override default model when no config file is present.       |
+| `SRC_FOLDER_PATTERN`                                      | Comma-separated globs (only used when no config file).       |
+| `ai-reviewer_LOG_LEVEL`                                   | `trace`, `debug`, `info` (default), `warn`, `error`.         |
+| `ai-reviewer_SKIP_POSTINSTALL`                            | Set to `1` to suppress the legacy postinstall workflow copy. |
 
 ## Architecture
 
@@ -294,7 +292,7 @@ npm run build
 
 ## Migration from v1.x
 
-The `postinstall` install path still works for one major version with a deprecation notice. Migrate to the composite Action when convenient. Set `AIREVIEWER_SKIP_POSTINSTALL=1` to suppress the install-time copy.
+The `postinstall` install path still works for one major version with a deprecation notice. Migrate to the composite Action when convenient. Set `ai-reviewer_SKIP_POSTINSTALL=1` to suppress the install-time copy.
 
 ## License
 

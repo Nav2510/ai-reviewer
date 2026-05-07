@@ -11,7 +11,7 @@ inputs:
     required: false
     default: ${{ github.token }}
   config:
-    description: Path to .aireviewerrc.yml (default discovers in repo root).
+    description: Path to .ai-reviewerrc.yml (default discovers in repo root).
     required: false
   openai-api-key:
     description: OpenAI API key (forwarded as OPENAI_API_KEY).
@@ -39,18 +39,18 @@ runs:
       with:
         node-version: "20"
 
-    - name: Restore aireviewer cache
+    - name: Restore ai-reviewer cache
       uses: actions/cache@v4
       with:
-        path: .aireviewer-cache
-        key: aireviewer-${{ github.event.pull_request.head.sha }}
+        path: .ai-reviewer-cache
+        key: ai-reviewer-${{ github.event.pull_request.head.sha }}
         restore-keys: |
-          aireviewer-
+          ai-reviewer-
 
-    - name: Install aireviewer
+    - name: Install ai-reviewer
       shell: bash
       run: |
-        npm install --no-save --no-audit --no-fund aireviewer@latest
+        npm install --no-save --no-audit --no-fund ai-reviewer@latest
 
     - name: Run AI Review
       id: review
@@ -60,6 +60,6 @@ runs:
         OPENAI_API_KEY: ${{ inputs.openai-api-key }}
         ANTHROPIC_API_KEY: ${{ inputs.anthropic-api-key }}
         GEMINI_API_KEY: ${{ inputs.gemini-api-key }}
-        AIREVIEWER_CONFIG: ${{ inputs.config }}
+        ai-reviewer_CONFIG: ${{ inputs.config }}
       run: |
-        node node_modules/aireviewer/dist/runners/action.js
+        node node_modules/ai-reviewer/dist/runners/action.js

@@ -40,7 +40,9 @@ export const ConfigSchema = z
     review: z
       .object({
         include: z.array(z.string()).default(["**/src/**/*.{ts,tsx,js,jsx}"]),
-        exclude: z.array(z.string()).default(["**/*.test.*", "**/*.spec.*", "dist/**", "node_modules/**"]),
+        exclude: z
+          .array(z.string())
+          .default(["**/*.test.*", "**/*.spec.*", "dist/**", "node_modules/**"]),
         mode: z.enum(["diff", "full-file", "hybrid"]).default("diff"),
         contextLines: z.number().int().min(0).max(50).default(3),
         minSeverity: z.enum(["info", "suggestion", "issue", "critical"]).default("suggestion"),
@@ -49,7 +51,7 @@ export const ConfigSchema = z
         skipLabels: z.array(z.string()).default(["no-ai-review", "wip"]),
         concurrency: z.number().int().positive().default(4),
         cache: z.enum(["off", "memory", "file"]).default("file"),
-        cacheDir: z.string().default(".aireviewer-cache"),
+        cacheDir: z.string().default(".ai-reviewer-cache"),
       })
       .default({}),
     rules: z.array(RuleSchema).default([]),
