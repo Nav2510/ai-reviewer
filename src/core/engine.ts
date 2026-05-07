@@ -30,17 +30,42 @@ export class ReviewEngine {
 
   shouldReview(file: FileChange): boolean {
     const { include, exclude } = this.deps.config.review;
-    if (file.status === "removed") return false;
-    if (exclude.some((g) => minimatch(file.path, g))) return false;
-    if (include.length && !include.some((g) => minimatch(file.path, g))) return false;
-    if (file.hunks.length === 0 && this.deps.config.review.mode === "diff") return false;
+    if (file.status === "removed") {
+      logger.debug({ file: file.path }, "Skipping file: status=removed");
+      return false;
+    }
+    const excludedBy = exclude.find((g) => minimatch(file.path, g));
+    if (excludedBy) {
+      logger.debug({ file: file.path, pattern: excludedBy }, "Skipping file: excluded by glob");
+      return false;
+    }
+    if (include.length && !include.some((g) => minimatch(file.path, g))) {
+      logger.debug({ file: file.path, include }, "Skipping file: not matched by include globs");
+      return false;
+    }
+    if (file.hunks.length === 0 && this.deps.config.review.mode === "diff") {
+      logger.debug({ file: file.path }, "Skipping file: no hunks in diff mode");
+      return false;
+    }
     return true;
   }
 
   async run(input: EngineRunInput): Promise<ReviewReport> {
     const startedAt = input.startedAt ?? new Date().toISOString();
+    logger.debug(
+      { totalFiles: input.files.length, mode: this.deps.config.review.mode },
+      "Engine.run starting filter pass",
+    );
     const files = input.files.filter((f) => this.shouldReview(f));
     const cfg = this.deps.config;
+    logger.debug(
+      {
+        reviewable: files.length,
+        skipped: input.files.length - files.length,
+        concurrency: cfg.review.concurrency,
+      },
+      "Files filtered, dispatching reviews",
+    );
 
     let runningCost = 0;
 
@@ -54,6 +79,17 @@ export class ReviewEngine {
           }
           const provider = this.deps.registry.resolveForFile(file.path);
           const fileRules = rulesForFile(cfg.rules as CustomRule[], file);
+          logger.debug(
+            {
+              file: file.path,
+              provider: provider.name,
+              model: provider.model,
+              ruleCount: fileRules.length,
+              hunks: file.hunks.length,
+              patchBytes: file.patch?.length ?? 0,
+            },
+            "Reviewing file",
+          );
           const ctx = {
             file,
             mode: cfg.review.mode,
@@ -63,6 +99,14 @@ export class ReviewEngine {
           };
           const systemPrompt = buildSystemPrompt(ctx);
           const userPrompt = buildUserPrompt(ctx);
+          logger.debug(
+            {
+              file: file.path,
+              systemPromptBytes: systemPrompt.length,
+              userPromptBytes: userPrompt.length,
+            },
+            "Built prompts",
+          );
 
           const cacheKey = hashKey([
             provider.name,
@@ -78,6 +122,7 @@ export class ReviewEngine {
             logger.info({ file: file.path, cacheKey }, "Cache hit");
             response = cached;
           } else {
+            logger.debug({ file: file.path, cacheKey }, "Cache miss, calling provider");
             response = await this.deps.registry.reviewWithFallback(provider.name, {
               file,
               systemPrompt,
@@ -86,6 +131,18 @@ export class ReviewEngine {
             });
             await this.deps.cache.set(cacheKey, response);
           }
+          logger.debug(
+            {
+              file: file.path,
+              provider: provider.name,
+              model: provider.model,
+              inputTokens: response.usage.inputTokens,
+              outputTokens: response.usage.outputTokens,
+              costUsd: response.costUsd,
+              rawFindings: response.result.changes.length,
+            },
+            "Provider response received",
+          );
 
           if (response.costUsd) runningCost += response.costUsd;
 
@@ -96,6 +153,17 @@ export class ReviewEngine {
             changedLines,
             diffOnly: cfg.review.mode === "diff",
           });
+          logger.debug(
+            {
+              file: file.path,
+              before: response.result.changes.length,
+              after: findings.length,
+              minSeverity: cfg.review.minSeverity,
+              maxPerFile: cfg.review.maxCommentsPerFile,
+              diffOnly: cfg.review.mode === "diff",
+            },
+            "Findings filtered",
+          );
 
           return { path: file.path, response, findings };
         } catch (err) {
