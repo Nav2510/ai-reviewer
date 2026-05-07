@@ -20,11 +20,23 @@ const RouteSchema = z.object({
   provider: z.string(),
 });
 
+const AutoApproveSchema = z
+  .object({
+    enabled: z.boolean().default(false),
+    maxSeverity: z
+      .enum(["info", "suggestion", "issue", "critical"])
+      .default("suggestion"),
+    requestChangesAbove: z.boolean().default(false),
+  })
+  .default({});
+
 const ReporterSchema = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("github"),
     publishSummaryComment: z.boolean().optional(),
     updatePrDescription: z.boolean().optional(),
+    resolveStaleComments: z.boolean().optional(),
+    autoApprove: AutoApproveSchema.optional(),
   }),
   z.object({ kind: z.literal("stdout") }),
   z.object({ kind: z.literal("json"), path: z.string() }),

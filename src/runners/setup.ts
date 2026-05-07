@@ -60,6 +60,8 @@ export function buildReporters(
           ...ghCtx,
           publishSummaryComment: r.publishSummaryComment,
           updatePrDescription: r.updatePrDescription,
+          resolveStaleComments: r.resolveStaleComments,
+          autoApprove: r.autoApprove,
         }),
       );
     } else if (r.kind === "stdout") {
