@@ -1,11 +1,9 @@
 # node modules
 /node_modules
-
-# builds
-/lib
 /dist
-
-# packed files
-*.tgz
-*.rar
-*.zip
+coverage
+.DS_Store
+*.log
+.env
+.env.local
+.ai-reviewer-cache
